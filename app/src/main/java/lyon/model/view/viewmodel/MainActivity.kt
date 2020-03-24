@@ -46,6 +46,12 @@ class MainActivity : AppCompatActivity() {
          * 在MainActivity中用of(this)表示ViewModel的生命週期會持續到MainActivity不再活動(destroy且沒有re-create)為止
          */
         viewModel = ViewModelProviders.of(this).get(MainViewModel::class.java)
+        viewModel.OnFreshCallBack(object :MainViewModel.OnFreshCallBack{
+            override fun OnFresh(data: String?) {
+                binding.txtHelloWord.text = data
+            }
+
+        })
 
         //將viewModel 放入Data Binding
         /**

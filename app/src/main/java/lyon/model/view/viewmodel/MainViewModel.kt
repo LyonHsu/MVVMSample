@@ -26,13 +26,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     var mData = ObservableField<String>()
     var isLoading = ObservableBoolean(false)
+
+    var onFreshCallBack:OnFreshCallBack ?= null
+
     fun refresh() {
         isLoading.set(true);
         dataModel.retrieveData(object : onDataReadyCallback {
             override fun onDataReady(data: String?) {
                 mData.set(data);
                 isLoading.set(false);
+
+                if(onFreshCallBack!=null)
+                    onFreshCallBack!!.OnFresh(data)
+
             }
         })
+    }
+
+    fun OnFreshCallBack(onFreshCallBack: OnFreshCallBack){
+        this.onFreshCallBack=onFreshCallBack
+    }
+
+    interface OnFreshCallBack{
+        fun OnFresh(data: String?)
     }
 }
