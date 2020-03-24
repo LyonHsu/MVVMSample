@@ -349,3 +349,83 @@ setViewModel這個method也是由Data Binding自動產生的，因為在<data>�
         }
     }
 這樣就是一個MVVM+Data Binding的架構了，View負責顯示UI，並用Data Binding和ViewModel連結；ViewModel只要用set()處理本身的Observerble欄位，不需要知道是誰在取用這些資料；Model也只提供method讓外部請求資料，這部分將來建立起api和資料庫時會比較清楚。
+
+
+建好的基本MVVM架構，其中帶有一個lifecycle的問題，當螢幕旋轉時，
+旋轉之後New Data就不見了，Why？當旋轉螢幕之類的configuration change發生時，Activity會被重新建立，生命週期會到onDestroy再重新onCreate
+MainActivity在create時會new一個新的MainViewModel，而非取得原本已持有資料的MainViewModel，因此，這個新的MainViewModel中是沒有資料的，畫面就變成空白。
+
+那怎麼讓Activity在經過configuration change之後還取得同一個ViewModel？
+
+Lifecycle-aware ViewModel
+Architecture Components中的ViewModel library具有lifecycle-aware的特性，不會因為Activity被重建而清除，讓Activity每次重建都能持有同一個instance。
+
+使用Architecture Components首先要在project gradle加入google()
+
+        allprojects {
+            repositories {
+                google()
+                jcenter()
+            }
+        }
+        
+ 加入dependencies，Android Studio 3.x使用implementation，若是用Android Studio 2.x就改成compile
+
+        dependencies {
+            implementation "android.arch.lifecycle:extensions:1.0.0"
+            annotationProcessor "android.arch.lifecycle:compiler:1.0.0"
+        }
+接著就可以改程式了，原本的MainViewModel讓它extend ViewModel，其他都不用改
+
+        import android.arch.lifecycle.ViewModel;
+        ...
+
+        public class MainViewModel extends ViewModel {
+
+            ...
+        }
+MainActivity改成這樣：
+
+        public class MainActivity extends AppCompatActivity {
+
+            private MainActivityBinding binding;
+
+            private MainViewModel viewModel;
+
+            @Override
+            protected void onCreate(Bundle savedInstanceState) {
+                super.onCreate(savedInstanceState);
+                binding = DataBindingUtil.setContentView(this, R.layout.main_activity);
+                viewModel = ViewModelProviders.of(this).get(MainViewModel.class);
+                binding.setViewModel(viewModel);
+            }
+        }
+不再用new而是改成透過ViewModelProviders協助我們取得ViewModel，其中of()的參數代表著ViewModel的生命範圍(scope)，在MainActivity中用of(this)表示ViewModel的生命週期會持續到MainActivity不再活動(destroy且沒有re-create)為止，只要MainActivity還在活動中，ViewModel就不會被清除，每次create都可以取得同一個ViewModel。
+
+下圖表示畫面旋轉導致Activity重新建立時ViewModel的生命週期
+
+　　　　　　　　The lifecycle of a ViewModel
+
+圖中Activity經過rotated重新建立，ViewModel則不受影響，一直到最後Activity finished時才結束其生命週期。
+
+執行結果：
+
+
+Context
+使用ViewModel有一點需特別注意的是不要儲存Activity/Fragment的內容或context在ViewModel中，因為configuration changes時當前的Activity及其內容會被destroy，就會變成存放被destroy的內容在ViewModel中而產生memory leak。
+
+若需要在ViewModel中使用Context的話可以改成使用AndroidViewModel，其constructor帶有application供我們取得context
+
+        public class MainViewModel extends AndroidViewModel {
+
+            ...
+
+            private final Context mContext; // To avoid leaks, this must be an Application Context.
+
+            public MainViewModel(@NonNull Application application) {
+                super(application);
+                mContext = application.getApplicationContext(); // Force use of Application Context.
+            }
+
+            ...
+        }
