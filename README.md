@@ -1,6 +1,7 @@
 # MVVMSample
 一個MVVM+Data Binding的架構
 
+Ref.
 https://ithelp.ithome.com.tw/articles/10192829
 
 在各種程式語言和架構中，關注點分離(Separation of Concerns)一直都是非常重要的原則，而Android原本的架構在這方面就做的不是很好。原架構雖然說是MVC，但顯示UI及邏輯處理都是在Activity/Fragment中，變成V跟C混在一起而難以測試維護。
